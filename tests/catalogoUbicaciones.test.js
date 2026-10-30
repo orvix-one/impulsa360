@@ -98,3 +98,65 @@ test('mantiene aliases ambiguos y el resolver falla de forma segura', () => {
 
   assert.equal(catalogo.resolverCiudadGps('Centro', [primera, segunda]), null);
 });
+
+const CATALOGO_PROD = [
+  ciudad('1', 'Camiri'),
+  ciudad('2', 'Cochabamba'),
+  ciudad('3', 'Concepcion', ['Concepción']),
+  ciudad('4', 'El Alto'),
+  ciudad('5', 'La Paz'),
+  ciudad('6', 'Montero'),
+  ciudad('7', 'Riberalta'),
+  ciudad('8', 'San Ignacio', ['San Ignacio de Velasco']),
+  ciudad('9', 'Santa Cruz de la Sierra', ['Santa Cruz']),
+];
+
+test('la ciudad gana al departamento aunque este coincida con otra ciudad', () => {
+  const { catalogo } = cargarCatalogo();
+  const casos = [
+    ['Montero', 'Departamento de Santa Cruz', 'Montero'],
+    ['Camiri', 'Departamento de Santa Cruz', 'Camiri'],
+    ['Concepción', 'Departamento de Santa Cruz', 'Concepcion'],
+    ['San Ignacio de Velasco', 'Departamento de Santa Cruz', 'San Ignacio'],
+    ['El Alto', 'Departamento de La Paz', 'El Alto'],
+    ['Riberalta', 'Departamento del Beni', 'Riberalta'],
+    ['Santa Cruz de la Sierra', 'Santa Cruz Department', 'Santa Cruz de la Sierra'],
+  ];
+
+  for (const [city, region, esperada] of casos) {
+    const candidatos = catalogo.candidatosCiudadGps({ city, region });
+    assert.equal(catalogo.resolverCiudadGps(candidatos, CATALOGO_PROD)?.nombre, esperada);
+  }
+});
+
+test('el departamento resuelve la ciudad solo si no hay coincidencia más específica', () => {
+  const { catalogo } = cargarCatalogo();
+  const resolver = (direccion) => catalogo.resolverCiudadGps(
+    catalogo.candidatosCiudadGps(direccion),
+    CATALOGO_PROD,
+  )?.nombre ?? null;
+
+  assert.equal(resolver({ city: 'Quillacollo', region: 'Departamento de Cochabamba' }), 'Cochabamba');
+  assert.equal(resolver({ region: 'Departamento del Beni' }), null);
+});
+
+test('calles y barrios homónimos de otra ciudad no alteran la detección', () => {
+  const { catalogo } = cargarCatalogo();
+  const candidatos = catalogo.candidatosCiudadGps({
+    city: 'Riberalta',
+    district: 'Barrio La Paz',
+    name: 'Avenida Santa Cruz',
+    region: 'Departamento del Beni',
+  });
+
+  assert.equal(catalogo.resolverCiudadGps(candidatos, CATALOGO_PROD)?.nombre, 'Riberalta');
+  assert.equal(catalogo.resolverCiudadGps('San Ignacio de Moxos', CATALOGO_PROD), null);
+});
+
+test('los slugs de versiones anteriores se convierten al nombre del catálogo', () => {
+  const { catalogo } = cargarCatalogo();
+
+  assert.equal(catalogo.resolverCiudadGps('santa_cruz', CATALOGO_PROD)?.nombre, 'Santa Cruz de la Sierra');
+  assert.equal(catalogo.resolverCiudadGps('la_paz', CATALOGO_PROD)?.nombre, 'La Paz');
+  assert.equal(catalogo.resolverCiudadGps('san_ignacio', CATALOGO_PROD)?.nombre, 'San Ignacio');
+});

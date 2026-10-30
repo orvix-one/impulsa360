@@ -69,7 +69,7 @@ import { setEdicionActiva } from '../lib/edicionActiva';
 import { photoSizeBucket, recordEvent } from '../lib/telemetry';
 import { drenarEscriturasCoalescidas } from '../lib/offlineSafety';
 import { clasificarIdActivacion } from '../lib/activationUuid';
-import { resolverCiudadGps } from '../lib/catalogoUbicaciones';
+import { candidatosCiudadGps, resolverCiudadGps } from '../lib/catalogoUbicaciones';
 
 const DEVICE_INFO = `react-native-${Platform.OS}`;
 const GPS_TIMEOUT_MS = 15000;
@@ -134,6 +134,7 @@ const optionalTextOrNull = (value) => {
   if (typeof value === 'string' && value.trim() === '') return null;
   return value ?? null;
 };
+const MENSAJE_CIUDAD_ACTIVACION_REQUERIDA = 'Selecciona la ciudad de activación.';
 const tieneCoordenadasValidas = (data = {}) => (
   Number.isFinite(data.latitud) && Number.isFinite(data.longitud)
 );
@@ -1084,6 +1085,15 @@ export default function FormularioActivacion({
     }
     return opciones;
   }, [catalogoCiudadesDisponible, ciudadesCatalogo, formulario.ciudad_activacion]);
+
+  useEffect(() => {
+    const valorActual = formulario.ciudad_activacion;
+    const ciudadCanonica = resolverCiudadGps(valorActual, ciudadesCatalogo)?.nombre;
+    if (!ciudadCanonica || ciudadCanonica === valorActual) return;
+    setFormulario((prev) => (
+      prev.ciudad_activacion === valorActual ? { ...prev, ciudad_activacion: ciudadCanonica } : prev
+    ));
+  }, [ciudadesCatalogo, formulario.ciudad_activacion]);
   const ciudadSeleccionada = useMemo(
     () => CIUDADES.find(c => c.key === resolverCiudadKey(formulario.ciudad_activacion)) || null,
     [formulario.ciudad_activacion],
@@ -1210,7 +1220,7 @@ export default function FormularioActivacion({
   };
 
   const resolverCiudadDesdeDireccion = useCallback((dir = {}) => {
-    const candidatos = [dir.city, dir.district, dir.subregion, dir.region, dir.name].filter(Boolean);
+    const candidatos = candidatosCiudadGps(dir);
 
     if (catalogoCiudadesDisponible) {
       return resolverCiudadGps(candidatos, ciudadesCatalogo)?.nombre || '';
@@ -1854,7 +1864,7 @@ export default function FormularioActivacion({
     if (!data.tipo_grupo) return 'Selecciona el tipo de activación (Tiendas de Barrio, Comercio, Transeúnte o Cliente antiguo).';
     if (!data.tipo_activacion) return 'Selecciona el tipo de activación específico.';
     if (obligatorios.ciudad_activacion && !data.ciudad_activacion) {
-      return 'Selecciona la ciudad de activación.';
+      return MENSAJE_CIUDAD_ACTIVACION_REQUERIDA;
     }
     if (obligatorios.zona_activacion && !data.zona_activacion) return 'Selecciona la zona de activación.';
     if (!impulsadorActual) return 'No se pudo obtener el nombre del activador.';
@@ -1968,7 +1978,7 @@ export default function FormularioActivacion({
     }
 
     let errorMsg = validar(formularioConBasicos);
-    if (isConnected !== false && errorMsg === 'No se pudo detectar la ciudad por GPS. Pulsa "Actualizar ubicación".') {
+    if (errorMsg === MENSAJE_CIUDAD_ACTIVACION_REQUERIDA) {
       const solicitudActiva = gpsSolicitudRef.current;
       const resultadoActivo = solicitudActiva ? await solicitudActiva : null;
       const ubicacionFinal = tieneCoordenadasValidas(resultadoActivo || {})
@@ -1978,14 +1988,6 @@ export default function FormularioActivacion({
       if (ubicacionFinal) {
         formularioConBasicos = { ...formularioConBasicos, ...ubicacionFinal };
         errorMsg = validar(formularioConBasicos);
-        // GPS válido = coordenadas válidas: si reverseGeocode no resolvió ciudad
-        // pero hay coordenadas, no se bloquea el guardado por la ciudad.
-        if (
-          errorMsg === 'No se pudo detectar la ciudad por GPS. Pulsa "Actualizar ubicación".'
-          && tieneCoordenadasValidas(formularioConBasicos)
-        ) {
-          errorMsg = '';
-        }
       }
     }
     if (errorMsg) {

@@ -246,3 +246,24 @@ test('las entradas históricas sin nuevas propiedades siguen resolviendo igual',
   assert.equal(resolverCamposObligatoriosFormulario({}).ciudad_activacion, false);
   assert.equal(resolverCamposObligatoriosFormulario({}).nombres_cliente, true);
 });
+
+test('con coordenadas la ciudad no bloquea y sin ciudad tampoco se exige zona', () => {
+  const comercio = { tipo_grupo: 'comercio', tipo_activacion: 'comercio' };
+  const coordenadas = { latitud: -11.01, longitud: -66.06 };
+
+  const sinGps = resolverCamposObligatoriosFormulario(comercio);
+  assert.equal(sinGps.ciudad_activacion, true);
+  assert.equal(sinGps.zona_activacion, true);
+
+  const sinCiudad = resolverCamposObligatoriosFormulario({ ...comercio, ...coordenadas });
+  assert.equal(sinCiudad.ciudad_activacion, false);
+  assert.equal(sinCiudad.zona_activacion, false);
+
+  const conCiudad = resolverCamposObligatoriosFormulario({
+    ...comercio,
+    ...coordenadas,
+    ciudad_activacion: 'Riberalta',
+  });
+  assert.equal(conCiudad.ciudad_activacion, false);
+  assert.equal(conCiudad.zona_activacion, true);
+});
