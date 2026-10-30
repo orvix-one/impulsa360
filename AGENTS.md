@@ -31,8 +31,8 @@
 - Camera capture (`components/CameraEvidencia.js` + `lib/cameraCaptureFlow.js`): on Android, `CameraView` (SurfaceView) must stay mounted during the photo preview — the preview is an opaque overlay on the same tree position. Unmounting the camera and mounting `Image` in one commit caused the blank-modal regression (build 81). iOS still unmounts on capture. Decision helpers (`mantenerCamaraMontadaEnPreview`, `camaraReutilizableEnPreview`) are pure and covered in `tests/cameraCaptureFlow.test.js`; "Repetir" reuses the live instance or remounts exactly one. Don't reintroduce unmount-on-capture on Android.
 - Testable domain logic lives in `lib/*.js`; RN-dependent libs (`upload`, `storage`, `telemetry`…) are loaded in tests through `@babel/core` + `node:module` stubs (see `tests/uploadProtection.test.js`). App logic belongs in those modules, not in components: `components/` (and `App.js`) are RN shells with no test runner.
 - `metro.config.js` replaces Node `ws` with a throwing shim; do not import Node WebSocket libraries into app code.
-- Supabase migrations under `supabase/migrations/` are not proof of remote state. Controlled apply/rollback/verify scripts live in `supabase/manual/`; never assume a migration was applied and never run destructive SQL against remote.
+- The database schema and migrations live in `../web_portal_impulsa360/supabase/` (single shared DB). Do not add SQL here. `docs/contrato-supabase-movil.md` lists the tables, columns, RPCs, Storage paths and Realtime channel this app depends on: update it when app code touches new ones, and never assume a migration was applied or run destructive SQL against remote.
 
 ## Docs to trust
-- Current references: `docs/auditoria-documental-app-movil.md` and `docs/esquema-base-datos-impulsa360.md`.
+- Current references: `docs/auditoria-documental-app-movil.md` and `docs/contrato-supabase-movil.md`.
 - The entire `docs/cliente/` folder is a frozen delivery snapshot pinned at version 1.0.10 (code 17), predating the current 1.0.30 (code 82). Trust `package.json`, `app.json`, and `android/gradle.properties` over it for anything version-, build-, or API-related.

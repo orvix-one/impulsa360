@@ -47,7 +47,7 @@ Nota de alcance: este documento describe código, configuración y contratos té
 - No se revisó la base de datos desplegada; solo las migraciones y consultas presentes en el repositorio.
 - Clasificación usada en este documento: **hecho comprobado** es lo que puede verificarse en el código o las migraciones locales; **riesgo** es una consecuencia posible que requiere validación operativa; **inferencia** es una conclusión razonable no comprobada en ejecución.
 - No se encontró código del portal web ni un contrato compartido versionado en este repositorio. No se puede confirmar desde aquí qué tablas, RPC o políticas comparte el portal ni qué versión está desplegada.
-- Las migraciones locales no son prueba del estado desplegado. La migración de telemetría `202610050001_telemetria_eventos.sql` declara explícitamente que no fue aplicada remotamente en la tarea que la creó, y los scripts de `supabase/manual/` indican aplicación manual controlada.
+- Las migraciones locales no son prueba del estado desplegado. La migración de telemetría `202610050001_telemetria_eventos.sql` declara explícitamente que no fue aplicada remotamente en la tarea que la creó, y los scripts de `web_portal_impulsa360/supabase/legacy/manual/` indican aplicación manual controlada.
 
 ## 2. Arquitectura y estructura del código
 
@@ -58,8 +58,8 @@ Nota de alcance: este documento describe código, configuración y contratos té
 | `App.js` | Estado global, sesión, roles, navegación por estado, sincronización, notificaciones, PIN y orquestación de fotos. |
 | `components/` | Pantallas y componentes de UI: autenticación, formulario, historial, control, notificaciones, cámara, intro y selectores. |
 | `lib/` | Reglas de negocio, persistencia, cifrado, PIN, Supabase, subida de fotos, telemetría, periodos, plazas y utilidades. |
-| `supabase/migrations/` | Esquema, RPC, RLS, Storage y telemetría. |
-| `supabase/manual/` | Scripts apply/rollback/verify de cambios operativos específicos. |
+| `web_portal_impulsa360/supabase/legacy/migrations/` | Esquema, RPC, RLS, Storage y telemetría. |
+| `web_portal_impulsa360/supabase/legacy/manual/` | Scripts apply/rollback/verify de cambios operativos específicos. |
 | `tests/` | Pruebas unitarias de reglas puras y flujos auxiliares. |
 | `android/` | Proyecto nativo Android, firma, manifiesto y módulo de diagnóstico de salida. |
 | `scripts/` | Preflight de release Android. |
@@ -426,7 +426,7 @@ La policy usa `equipo_lider_historial.fin IS NULL`, `equipos.activo`, líder act
 Esta sección describe **definiciones locales** y contratos consumidos por la app. No es un inventario certificado de la base desplegada.
 
 - **Hecho:** la migración `202610050001_telemetria_eventos.sql` declara explícitamente `NO aplicada remotamente en esta tarea`.
-- **Hecho:** los scripts de `supabase/manual/` indican aplicación manual controlada y algunos rollbacks se basan en definiciones exportadas de producción. Su presencia en el repo no confirma que se hayan ejecutado.
+- **Hecho:** los scripts de `web_portal_impulsa360/supabase/legacy/manual/` indican aplicación manual controlada y algunos rollbacks se basan en definiciones exportadas de producción. Su presencia en el repo no confirma que se hayan ejecutado.
 - **Hecho:** no existe código del portal web en este repositorio. No se puede verificar aquí qué tablas, RPC, grants o políticas comparte el portal, ni qué versión de esos contratos está desplegada.
 - **Inferencia:** si el portal web consume el mismo proyecto Supabase, los contratos de `activaciones`, `activadores`, roles, notificaciones o Storage podrían ser compartidos; esta auditoría no lo confirma.
 - **Límite:** no se consultó la base desplegada ni se ejecutaron scripts de verificación. Cualquier afirmación sobre el estado remoto requiere acceso autorizado y lectura controlada.
@@ -486,7 +486,7 @@ Estos contratos son los que el código local espera. No se validó que las colum
 
 `202610150001_control_activadores_hora_bolivia_apply.sql` redefine `control_activadores_jerarquia` para calcular `Hoy`, `Semana` y `Mes` con `(now() at time zone 'America/La_Paz')::date`, evitando depender de `current_date` del servidor. Incluye scripts de verificación.
 
-`202610140001_control_metricas_roles_efectivos.sql` documenta la definición multirrol base. Su aplicación, rollback y verificación se apoyan en scripts manuales de `supabase/manual/`.
+`202610140001_control_metricas_roles_efectivos.sql` documenta la definición multirrol base. Su aplicación, rollback y verificación se apoyan en scripts manuales de `web_portal_impulsa360/supabase/legacy/manual/`.
 
 ### 10.7 Observación de integración
 
@@ -567,7 +567,7 @@ Los eventos revisados no incluyen nombres, cédulas, teléfonos ni contenido de 
 | Preflight y runtime no validan lo mismo | `scripts/preflight-android-release.sh` acepta `app.json`; `lib/config.js` no. | Un build puede pasar preflight y arrancar sin Supabase si no hay variables en el entorno/.env. |
 | Evidencia opcional sin acción de captura | `lib/reglasFotografias.js`, `lib/formularioActivacionRules.js` y `components/FormularioActivacion.js`. | En `transeunte/cliente_antiguo` y `cliente_antiguo/cliente_antiguo` no se ofrece cámara/galería para la evidencia opcional; solo se conserva si ya existe. |
 | Criterio de reactivación distinto entre cliente y RPC | `lib/elegibilidadReactivacion.js` usa `includes('reactivacion')`; la RPC usa `like 'reactivacion%'`. | Con tipos no estándar, el cliente podría llamar a la RPC y esta devolver elegible sin comparar. |
-| Estado desplegado no confirmado | Migraciones locales y `supabase/manual/`; telemetría declara no aplicada remotamente. | No se puede afirmar que RLS, RPC, columnas o Storage existan en producción tal como están en el repo. |
+| Estado desplegado no confirmado | Migraciones locales y `web_portal_impulsa360/supabase/legacy/manual/`; telemetría declara no aplicada remotamente. | No se puede afirmar que RLS, RPC, columnas o Storage existan en producción tal como están en el repo. |
 | Contrato del portal web no verificable | No hay código de portal en el repositorio. | Un cambio de esquema podría romper al portal o a la app; no se conoce el contrato compartido real. |
 | Roles calculados en cliente y con fallback a caché | `App.js`, `lib/rolesAdicionales.js`. | Una caché obsoleta podría mostrar acciones no permitidas; RLS/RPC deben bloquearlas. |
 | `App.js` concentra demasiadas responsabilidades | `App.js` (`AppShell`, sync, sesión, fotos, notificaciones). | Mayor costo de mantenimiento y riesgo de regresiones. |
@@ -614,11 +614,11 @@ Los eventos revisados no incluyen nombres, cédulas, teléfonos ni contenido de 
 - `lib/upload.js`: fotos, límites, rutas y subida.
 - `lib/telemetry.js`, `lib/exitInfo.js` y `android/app/src/main/java/com/integrat360/impulsa360/ExitInfoModule.kt`: telemetría y diagnóstico.
 - `lib/supabase.js`, `lib/config.js`: cliente y configuración.
-- `supabase/migrations/202607310001_control_activadores_rpc.sql`: RPC e índices de control.
-- `supabase/migrations/202608310001_validar_elegibilidad_reactivacion.sql`: elegibilidad de reactivación.
-- `supabase/migrations/202609140001_storage_fotos_activaciones_rls.sql`, `202609140002_storage_fotos_activaciones_private.sql` y `202609170001_storage_fotos_activaciones_select_equipo.sql`: Storage y RLS.
-- `supabase/migrations/202610050001_telemetria_eventos.sql`: definición base local de telemetría; declara no aplicada remotamente.
-- `supabase/migrations/202610060001_telemetria_event_id.sql`: idempotencia de telemetría.
-- `supabase/manual/202610140001_control_metricas_roles_efectivos_apply.sql` y `202610150001_control_activadores_hora_bolivia_apply.sql`: aplicación manual de métricas y hora Bolivia.
+- `web_portal_impulsa360/supabase/legacy/migrations/202607310001_control_activadores_rpc.sql`: RPC e índices de control.
+- `web_portal_impulsa360/supabase/legacy/migrations/202608310001_validar_elegibilidad_reactivacion.sql`: elegibilidad de reactivación.
+- `web_portal_impulsa360/supabase/legacy/migrations/202609140001_storage_fotos_activaciones_rls.sql`, `202609140002_storage_fotos_activaciones_private.sql` y `202609170001_storage_fotos_activaciones_select_equipo.sql`: Storage y RLS.
+- `web_portal_impulsa360/supabase/legacy/migrations/202610050001_telemetria_eventos.sql`: definición base local de telemetría; declara no aplicada remotamente.
+- `web_portal_impulsa360/supabase/legacy/migrations/202610060001_telemetria_event_id.sql`: idempotencia de telemetría.
+- `web_portal_impulsa360/supabase/legacy/manual/202610140001_control_metricas_roles_efectivos_apply.sql` y `202610150001_control_activadores_hora_bolivia_apply.sql`: aplicación manual de métricas y hora Bolivia.
 - `android/build.gradle`, `android/app/build.gradle`, `android/gradle.properties`, `android/app/src/main/AndroidManifest.xml`, `plugins/withAndroidNoBackup.js` y `scripts/preflight-android-release.sh`: build, firma y restricciones Android.
 - `package.json`, `app.json`, `eas.json`, `README.md` y `.gitignore`: identificación, configuración y hallazgos documentales.
