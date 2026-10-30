@@ -13,6 +13,7 @@ Fuente de verdad del esquema: `web_portal_impulsa360/supabase/migrations/` (base
 | `activador_plaza_temporal` | `select *` | propio, `cancelado_at is null` | `lib/plazasTemporales.js` |
 | `notificaciones_destinatarios` | `select`, `update leida_at`, conteos | `usuario_id = auth.uid()` | `lib/notificaciones.js` |
 | `notificaciones` | `select id, titulo, mensaje, created_at` | `id in (...)` | `lib/notificaciones.js` |
+| `plazas` | `select id, nombre, nombre_normalizado, aliases` | `activa = true` y `es_ciudad_geografica = true` (política y grants por columna para `authenticated`) | `lib/catalogoUbicaciones.js` |
 
 Columnas escritas en `activaciones`: `id`, `usuario_id`, `nombres_cliente`, `apellidos_cliente`, `ci_cliente`, `telefono_cliente`, `email_cliente`, `descargo_app`, `registro`, `cash_in`, `cash_out`, `p2p`, `qr_fisico`, `hubo_error`, `descripcion_error`, `tipo_error`, `foto_cash_in`, `tipo_tienda`, `rubro_comercio`, `rubro_comercio_otro`, `comercio_fuera_mercado`, `es_plaza_temporal`, `plaza_temporal`, `tipo_activacion`, `base_activacion`, `es_reactivacion`, `tamano_tienda`, `tipo_comercio`, `foto_url`, `fecha_activacion`, `latitud`, `longitud`, `reactivacion_comercio`, `respaldo`, `creditos`, `remesas`, `ciudad_activacion`, `zona_activacion`, `distrito_gps`, `region_gps`, `plaza`, `estado_sync`, `dispositivo`.
 
